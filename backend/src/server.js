@@ -1,44 +1,33 @@
 import express from "express";
-import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import path from "path";
-import { fileURLToPath } from "url";
 
 import authRoutes from "./routes/auth.route.js";
 import messageRoutes from "./routes/message.route.js";
 import { connectDB } from "./lib/db.js";
-
-dotenv.config();
+import { ENV } from "./lib/env.js";
 
 const app = express();
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = path.resolve();
 
-const PORT = process.env.PORT || 3000;
+const PORT = ENV.PORT || 3000;
 
-app.use(express.json());
+app.use(express.json()); // req.body
 app.use(cookieParser());
 
-// Rotas da API
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 
-// Caminho correto do build do frontend
-const frontendPath = path.resolve(__dirname, "../../frontend/dist");
-console.log("📂 Servindo frontend de:", frontendPath);
+// make ready for deployment
+if (ENV.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "../frontend/dist")));
 
-app.use(express.static(frontendPath));
-
-app.get("*", (req, res) => {
-  res.sendFile(path.join(frontendPath, "index.html"), (err) => {
-    if (err) {
-      console.error("❌ Erro ao servir index.html:", err);
-      res.status(500).send("Erro ao carregar o frontend");
-    }
+  app.get("*", (_, res) => {
+    res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
   });
-});
+}
 
 app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
+  console.log("Server running on port: " + PORT);
   connectDB();
 });
